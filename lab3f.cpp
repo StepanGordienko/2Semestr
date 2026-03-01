@@ -108,3 +108,355 @@ int main() {
 
     return 0;
 }
+
+
+
+
+
+
+#ifndef BOOK_HPP
+#define BOOK_HPP
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <iomanip>
+
+using namespace std;
+
+struct Bookmark {
+    string color;
+    string material;
+    int pageNumber;
+
+    Bookmark() : color("Red"), material("Paper"), pageNumber(1) {}
+
+    Bookmark(const string& c, const string& m, int p)
+        : color(c), material(m), pageNumber(p) {
+    }
+
+    Bookmark(const Bookmark& other)
+        : color(other.color), material(other.material), pageNumber(other.pageNumber) {
+    }
+
+
+    Bookmark& operator++() {
+        pageNumber++;
+        return *this;
+    }
+
+    Bookmark operator++(int) {
+        Bookmark temp = *this;
+        pageNumber++;
+        return temp;
+    }
+
+    Bookmark& operator--() {
+        if (pageNumber > 1) pageNumber--;
+        return *this;
+    }
+
+    Bookmark operator--(int) {
+        Bookmark temp = *this;
+        if (pageNumber > 1) pageNumber--;
+        return temp;
+    }
+
+    void display() const {
+        cout << "Bookmark: " << color << ", " << material << ", page " << pageNumber << endl;
+    }
+};
+
+class Book {
+private:
+    string author;
+    string title;
+    int pages;
+    double rating;
+    double cost;
+    vector<string> works;
+    Bookmark* bookmark;
+
+public:
+    // Конструкторы
+    Book() : author("Unknown"), title("Untitled"), pages(0), rating(0.0), cost(0.0), bookmark(nullptr) {
+        cout << "Book default constructor called" << endl;
+    }
+
+    Book(const string& auth, const string& titl, int p, double rate, double c, const vector<string>& w)
+        : author(auth), title(titl), pages(p), rating(rate), cost(c), works(w), bookmark(nullptr) {
+        cout << "Book full constructor called" << endl;
+    }
+
+    Book(const Book& other)
+        : author(other.author), title(other.title), pages(other.pages),
+        rating(other.rating), cost(other.cost), works(other.works) {
+        if (other.bookmark) {
+            bookmark = new Bookmark(*other.bookmark);
+        }
+        else {
+            bookmark = nullptr;
+        }
+        cout << "Book copy constructor called" << endl;
+    }
+
+    // Деструктор
+    ~Book() {
+        delete bookmark;
+        cout << "Book destructor called for: " << title << endl;
+    }
+
+    // Геттеры
+    string getAuthor() const { return author; }
+    string getTitle() const { return title; }
+    int getPages() const { return pages; }
+    double getRating() const { return rating; }
+    double getCost() const { return cost; }
+    vector<string> getWorks() const { return works; }
+    Bookmark* getBookmark() const { return bookmark; }
+
+    // Сеттеры
+    void setAuthor(const string& auth) {
+        if (!auth.empty()) author = auth;
+    }
+
+    void setTitle(const string& titl) {
+        if (!titl.empty()) title = titl;
+    }
+
+    void setPages(int p) {
+        if (p > 0) pages = p;
+    }
+
+    void setRating(double r) {
+        if (r >= 0 && r <= 5) rating = r;
+    }
+
+    void setCost(double c) {
+        if (c >= 0) cost = c;
+    }
+
+    void setWorks(const vector<string>& w) {
+        works = w;
+    }
+
+    void setBookmark(Bookmark* bm) {
+        delete bookmark;
+        bookmark = bm;
+    }
+
+    // Методы оценки
+    void ratePositive() {
+        rating += 1.0;
+        if (rating > 5.0) rating = 5.0;
+    }
+
+    void rateNegative() {
+        rating -= 1.0;
+        if (rating < 0.0) rating = 0.0;
+    }
+
+    // Изменение стоимости
+    void changeCost(double percent) {
+        cost *= (1.0 + percent / 100.0);
+    }
+
+    // Вывод информации
+    void display() const {
+        cout << "\n=== Book Information ===" << endl;
+        cout << "Author: " << author << endl;
+        cout << "Title: " << title << endl;
+        cout << "Pages: " << pages << endl;
+        cout << "Rating: " << fixed << setprecision(1) << rating << endl;
+        cout << "Cost: " << fixed << setprecision(2) << cost << endl;
+        cout << "Works included: ";
+        for (size_t i = 0; i < works.size(); i++) {
+            cout << works[i];
+            if (i < works.size() - 1) cout << ", ";
+        }
+        cout << endl;
+        if (bookmark) {
+            bookmark->display();
+        }
+    }
+
+    // Операторы
+    Book operator+(const Book& other) const {
+        vector<string> newWorks;
+        for (const auto& w : works) newWorks.push_back(w);
+        for (const auto& w : other.works) {
+            bool found = false;
+            for (const auto& existing : newWorks) {
+                if (existing == w) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) newWorks.push_back(w);
+        }
+
+        string newTitle = title + " & " + other.title;
+        string newAuthor = (author == other.author) ? author : author + "/" + other.author;
+
+        return Book(newAuthor, newTitle, pages + other.pages,
+            (rating + other.rating) / 2, cost + other.cost, newWorks);
+    }
+
+    Book& operator+=(const Book& other) {
+        for (const auto& w : other.works) {
+            bool found = false;
+            for (const auto& existing : works) {
+                if (existing == w) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) works.push_back(w);
+        }
+
+        title = title + " & " + other.title;
+        author = (author == other.author) ? author : author + "/" + other.author;
+        pages += other.pages;
+        rating = (rating + other.rating) / 2;
+        cost += other.cost;
+
+        return *this;
+    }
+
+    Book operator/(const Book& other) const {
+        vector<string> newWorks;
+        size_t half1 = works.size() / 2;
+        size_t half2 = other.works.size() / 2;
+
+        for (size_t i = 0; i < half1; i++) newWorks.push_back(works[i]);
+        for (size_t i = 0; i < half2; i++) newWorks.push_back(other.works[i]);
+
+        return Book(author, title + " (split)", pages + other.pages,
+            rating, cost * 0.7, newWorks);
+    }
+};
+
+#endif
+
+
+
+
+
+
+
+
+
+#ifndef BOOKSHELF_HPP
+#define BOOKSHELF_HPP
+
+#include "Book.hpp"
+#include <algorithm>
+
+class Bookshelf {
+private:
+    Book** books;
+    int maxCapacity;
+    int currentCount;
+
+public:
+
+    Bookshelf() : maxCapacity(10), currentCount(0) {
+        books = new Book * [maxCapacity];
+        for (int i = 0; i < maxCapacity; i++) books[i] = nullptr;
+        cout << "Bookshelf default constructor called" << endl;
+    }
+
+    Bookshelf(int capacity) : maxCapacity(capacity), currentCount(0) {
+        books = new Book * [maxCapacity];
+        for (int i = 0; i < maxCapacity; i++) books[i] = nullptr;
+        cout << "Bookshelf parameter constructor called" << endl;
+    }
+
+    Bookshelf(const Bookshelf& other) : maxCapacity(other.maxCapacity), currentCount(other.currentCount) {
+        books = new Book * [maxCapacity];
+        for (int i = 0; i < maxCapacity; i++) {
+            if (other.books[i]) {
+                books[i] = new Book(*other.books[i]);
+            }
+            else {
+                books[i] = nullptr;
+            }
+        }
+        cout << "Bookshelf copy constructor called" << endl;
+    }
+
+    ~Bookshelf() {
+        for (int i = 0; i < maxCapacity; i++) {
+            delete books[i];
+        }
+        delete[] books;
+        cout << "Bookshelf destructor called" << endl;
+    }
+
+    bool placeBook(Book* book) {
+        if (currentCount >= maxCapacity || !book) {
+            return false;
+        }
+
+        for (int i = 0; i < maxCapacity; i++) {
+            if (!books[i]) {
+                books[i] = book;
+                currentCount++;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void sortByTitle() {
+        Book** temp = new Book * [currentCount];
+        int idx = 0;
+        for (int i = 0; i < maxCapacity; i++) {
+            if (books[i]) {
+                temp[idx++] = books[i];
+            }
+        }
+
+        for (int i = 0; i < currentCount - 1; i++) {
+            for (int j = 0; j < currentCount - i - 1; j++) {
+                if (temp[j]->getTitle() > temp[j + 1]->getTitle()) {
+                    Book* swap = temp[j];
+                    temp[j] = temp[j + 1];
+                    temp[j + 1] = swap;
+                }
+            }
+        }
+
+        for (int i = 0; i < maxCapacity; i++) {
+            books[i] = nullptr;
+        }
+        for (int i = 0; i < currentCount; i++) {
+            books[i] = temp[i];
+        }
+
+        delete[] temp;
+    }
+
+    void display() const {
+        cout << "\n=== Bookshelf Contents ===" << endl;
+        cout << "Capacity: " << maxCapacity << ", Current: " << currentCount << endl;
+        for (int i = 0; i < maxCapacity; i++) {
+            if (books[i]) {
+                cout << "Position " << i << ": " << books[i]->getTitle()
+                    << " by " << books[i]->getAuthor() << endl;
+            }
+        }
+    }
+
+    // Геттеры
+    int getCurrentCount() const { return currentCount; }
+    int getMaxCapacity() const { return maxCapacity; }
+    Book* getBookAt(int index) const {
+        if (index >= 0 && index < maxCapacity) {
+            return books[index];
+        }
+        return nullptr;
+    }
+};
+
+#endif
